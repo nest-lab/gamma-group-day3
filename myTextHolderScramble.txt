@@ -1,0 +1,11 @@
+cat
+dog
+meek
+portable
+fat
+label
+music
+car
+tree
+principal
+lottery
