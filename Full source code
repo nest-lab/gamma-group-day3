@@ -1,0 +1,199 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.IO;
+
+enum WordType : byte
+{
+    FullWord,
+    PartialWord,
+    FullWordAndPartialWord
+}
+
+namespace BeamSearchWords
+{
+    class Program
+    {
+        static Dictionary<string, WordType> _words = new Dictionary<string, WordType>(400000, StringComparer.Ordinal);
+        static Dictionary<string, bool> _found = new Dictionary<string, bool>(StringComparer.Ordinal);
+        const int _minLength = 3; // Minimum length of matching words.
+        const string _pattern = @"catdogmeekewqrneverpeterflare";
+
+
+       
+
+        static void Main(string[] args)
+        {
+            using (StreamReader reader = new StreamReader("myTextHolderScramble.txt"))
+            {
+                while (true)
+                {
+                    string line = reader.ReadLine();
+                    if (line == null)
+                    {
+                        break;
+                    }
+                    if (line.Length >= _minLength)
+                    {
+                        for (int i = 1; i <= line.Length; i++)
+                        {
+                            string substring = line.Substring(0, i);
+                            WordType value;
+                            if (_words.TryGetValue(substring, out value))
+                            {
+                                // If this is a full word.
+                                if (i == line.Length)
+                                {
+                                    // If only partial word is stored.
+                                    if (value == WordType.PartialWord)
+                                    {
+                                        // Upgrade type.
+                                        _words[substring] = WordType.FullWordAndPartialWord;
+                                    }
+                                }
+                                else
+                                {
+                                    // If not a full word and only partial word is stored.
+                                    if (value == WordType.FullWord)
+                                    {
+                                        _words[substring] = WordType.FullWordAndPartialWord;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // If this is a full word.
+                                if (i == line.Length)
+                                {
+                                    _words.Add(substring, WordType.FullWord);
+                                }
+                                else
+                                {
+                                    _words.Add(substring, WordType.PartialWord);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            Console.WriteLine("[Text File Read (Completed!!!.....Press Enter to see the generated random scrambled word and your words)]");
+            Console.ReadLine();
+
+            // Write pattern.
+            Console.WriteLine(_pattern);
+            Console.WriteLine();
+
+            // Split on newlines.
+            string[] lines = _pattern.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+
+
+            // Put into 2D array.
+            int height = lines.Length;
+            int width = lines[0].Length;
+            char[,] array = new char[height, width];
+            for (int i = 0; i < width; i++)
+            {
+                for (int a = 0; a < height; a++)
+                {
+                    array[a, i] = lines[a][i];
+                }
+            }
+
+
+            // Start at each square in the 2D array.
+            for (int i = 0; i < width; i++)
+            {
+                for (int a = 0; a < height; a++)
+                {
+                    // Search all directions.
+                    for (int d = 0; d < 8; d++)
+                    {
+                        SearchAt(array, i, a, width, height, "", d);
+                    }
+                }
+            }
+
+            Console.WriteLine("[Search completed for the words found in the scrambled word]");
+            Console.ReadLine();
+        }
+
+        
+        static void SearchAt(char[,] array,
+            int i,
+            int a,
+            int width,
+            int height,
+            string build,
+            int direction)
+        {
+            // Don't go past around array bounds.
+            if (i >= width ||
+                i < 0 ||
+                a >= height ||
+                a < 0)
+            {
+                return;
+            }
+            // Get letter.
+            char letter = array[a, i];
+            // Append.
+            string pass = build + letter;
+            // See if full word.
+            WordType value;
+            if (_words.TryGetValue(pass, out value))
+            {
+                // Handle all full words.
+                if (value == WordType.FullWord ||
+                    value == WordType.FullWordAndPartialWord)
+                {
+                    // Don't display same word twice.
+                    if (!_found.ContainsKey(pass))
+                    {
+                        Console.WriteLine("{0} found", pass);
+                        _found.Add(pass, true);
+                    }
+                }
+                // Handle all partial words.
+                if (value == WordType.PartialWord ||
+                    value == WordType.FullWordAndPartialWord)
+                {
+                    // Continue in one direction.
+                    switch (direction)
+                    {
+                        case 0:
+                            SearchAt(array, i + 1, a, width, height, pass, direction);
+                            break;
+                        case 1:
+                            SearchAt(array, i, a + 1, width, height, pass, direction);
+                            break;
+                        case 2:
+                            SearchAt(array, i + 1, a + 1, width, height, pass, direction);
+                            break;
+                        case 3:
+                            SearchAt(array, i - 1, a, width, height, pass, direction);
+                            break;
+                        case 4:
+                            SearchAt(array, i, a - 1, width, height, pass, direction);
+                            break;
+                        case 5:
+                            SearchAt(array, i - 1, a - 1, width, height, pass, direction);
+                            break;
+                        case 6:
+                            SearchAt(array, i - 1, a + 1, width, height, pass, direction);
+                            break;
+                        case 7:
+                            SearchAt(array, i + 1, a - 1, width, height, pass, direction);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+}
+
